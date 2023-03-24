@@ -75,24 +75,39 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 
 		switch clientResponse {
 		case .head(let responseHead):
-			guard responseHead.status == .switchingProtocols,
-				  let upgradeHeader = responseHead.headers.first(name: "upgrade"),
-				  upgradeHeader.lowercased() == "websocket",
-				  let connectionHeader = responseHead.headers.first(name: "connection"),
-				  connectionHeader.lowercased() == "upgrade",
-				  let acceptHeader = responseHead.headers.first(name: "sec-websocket-accept")
-			else {
+			guard responseHead.status == .switchingProtocols else {
+				print("WebSocket upgrade failed: invalid status code")
 				self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
 				return
 			}
 
-			// Verify the "sec-websocket-accept" header
-			let expectedAcceptHeader = createExpectedWebSocketAcceptHeader(fromKey: websocketKey)
-			if acceptHeader != expectedAcceptHeader {
+			guard let upgradeHeader = responseHead.headers.first(name: "upgrade"),
+				  upgradeHeader.lowercased() == "websocket" else {
+				print("WebSocket upgrade failed: missing or invalid 'upgrade' header")
 				self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
 				return
 			}
-	
+
+			guard let connectionHeader = responseHead.headers.first(name: "connection"),
+				  connectionHeader.lowercased() == "upgrade" else {
+				print("WebSocket upgrade failed: missing or invalid 'connection' header")
+				self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
+				return
+			}
+
+			guard let acceptHeader = responseHead.headers.first(name: "sec-websocket-accept") else {
+				print("WebSocket upgrade failed: missing 'sec-websocket-accept' header")
+				self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
+				return
+			}
+
+			let expectedAcceptHeader = createExpectedWebSocketAcceptHeader(fromKey: websocketKey)
+			guard acceptHeader == expectedAcceptHeader else {
+				print("WebSocket upgrade failed: invalid 'sec-websocket-accept' header")
+				self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
+				return
+			}
+
 		case .body:
 			break
 		case .end:
