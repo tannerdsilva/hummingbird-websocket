@@ -199,11 +199,11 @@ public final class HBWebSocket {
     func receivedClose(frame: WebSocketFrame) {
         // Handle a received close frame. We're just going to close.
         self.isClosed = true
+        print("WebSocket CLOSE RECEIVED")
         self.channel.close(promise: nil)
     }
 
     func errorCaught(_ error: Error) {
-    	print("WebSocket error \(error)")
         let errorCode: WebSocketErrorCode
         if let error = error as? NIOWebSocketError {
             errorCode = WebSocketErrorCode(error)

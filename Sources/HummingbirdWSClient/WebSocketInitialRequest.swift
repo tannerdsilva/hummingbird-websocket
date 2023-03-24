@@ -45,6 +45,10 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		var headers = self.headers
 		headers.add(name: "content-length", value: "0")
 		headers.replaceOrAdd(name: "host", value: self.host)
+		headers.add(name: "upgrade", value: "websocket")
+		headers.add(name: "connection", value: "Upgrade")
+		headers.add(name: "sec-websocket-key", value: websocketKey)
+		headers.add(name: "sec-websocket-version", value: "13")
 
 		let requestHead = HTTPRequestHead(
 			version: HTTPVersion(major: 1, minor: 1),
