@@ -204,6 +204,7 @@ public final class HBWebSocket {
     }
 
     func errorCaught(_ error: Error) {
+		 print("WebSocket ERROR CAUGHT \(error)")
         let errorCode: WebSocketErrorCode
         if let error = error as? NIOWebSocketError {
             errorCode = WebSocketErrorCode(error)
