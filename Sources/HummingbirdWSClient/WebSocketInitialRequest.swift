@@ -76,7 +76,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		switch clientResponse {
 		case .head(let responseHead):
 			guard responseHead.status == .switchingProtocols else {
-				print("WebSocket upgrade failed: invalid status code")
+				print("WebSocket upgrade failed: invalid status code: \(responseHead.status)")
 				self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
 				return
 			}
