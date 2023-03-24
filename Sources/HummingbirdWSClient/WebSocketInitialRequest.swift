@@ -15,7 +15,7 @@
 import Hummingbird
 import NIOCore
 import NIOHTTP1
-
+import struct Foundation.Data
 /// The HTTP handler to be used to initiate the request.
 /// This initial request will be adapted by the WebSocket upgrader to contain the upgrade header parameters.
 /// Channel read will only be called if the upgrade fails.
@@ -40,6 +40,11 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
         var headers = self.headers
         headers.add(name: "content-length", value: "0")
         headers.replaceOrAdd(name: "host", value: self.host)
+		headers.add(name: "upgrade", value: "websocket")
+		headers.add(name: "connection", value: "upgrade")
+		headers.add(name: "sec-websocket-version", value: "13")
+		let websocketKey = Data((0..<16).map { _ in UInt8.random(in: .min ... .max) }).base64EncodedString()
+		headers.add(name: "sec-websocket-key", value: websocketKey)
 
         let requestHead = HTTPRequestHead(
             version: HTTPVersion(major: 1, minor: 1),
