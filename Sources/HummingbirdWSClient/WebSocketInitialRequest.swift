@@ -16,65 +16,94 @@ import Hummingbird
 import NIOCore
 import NIOHTTP1
 import struct Foundation.Data
+import Crypto
+
 /// The HTTP handler to be used to initiate the request.
 /// This initial request will be adapted by the WebSocket upgrader to contain the upgrade header parameters.
 /// Channel read will only be called if the upgrade fails.
 final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChannelHandler {
-    public typealias InboundIn = HTTPClientResponsePart
-    public typealias OutboundOut = HTTPClientRequestPart
+	public typealias InboundIn = HTTPClientResponsePart
+	public typealias OutboundOut = HTTPClientRequestPart
 
-    let host: String
-    let urlPath: String
-    let headers: HTTPHeaders
-    let upgradePromise: EventLoopPromise<Void>
+	let websocketKey:String
+	
+	let host: String
+	let urlPath: String
+	let headers: HTTPHeaders
+	let upgradePromise: EventLoopPromise<Void>
 
-    init(url: HBWebSocketClient.SplitURL, headers: HTTPHeaders = [:], upgradePromise: EventLoopPromise<Void>) throws {
-        self.host = url.hostHeader
-        self.urlPath = url.pathQuery
-        self.headers = headers
-        self.upgradePromise = upgradePromise
-    }
+	init(websocketKey:String, url: HBWebSocketClient.SplitURL, headers: HTTPHeaders = [:], upgradePromise: EventLoopPromise<Void>) throws {
+		self.websocketKey = websocketKey
+		self.host = url.hostHeader
+		self.urlPath = url.pathQuery
+		self.headers = headers
+		self.upgradePromise = upgradePromise
+	}
 
-    public func channelActive(context: ChannelHandlerContext) {
-        // We are connected. It's time to send the message to the server to initialize the upgrade dance.
-        var headers = self.headers
-        headers.add(name: "content-length", value: "0")
-        headers.replaceOrAdd(name: "host", value: self.host)
-		headers.add(name: "upgrade", value: "websocket")
-		headers.add(name: "connection", value: "upgrade")
-		headers.add(name: "sec-websocket-version", value: "13")
-		let websocketKey = Data((0..<16).map { _ in UInt8.random(in: .min ... .max) }).base64EncodedString()
-		headers.add(name: "sec-websocket-key", value: websocketKey)
+	public func channelActive(context: ChannelHandlerContext) {
+		// We are connected. It's time to send the message to the server to initialize the upgrade dance.
+		var headers = self.headers
+		headers.add(name: "content-length", value: "0")
+		headers.replaceOrAdd(name: "host", value: self.host)
 
-        let requestHead = HTTPRequestHead(
-            version: HTTPVersion(major: 1, minor: 1),
-            method: .GET,
-            uri: urlPath,
-            headers: headers
-        )
+		let requestHead = HTTPRequestHead(
+			version: HTTPVersion(major: 1, minor: 1),
+			method: .GET,
+			uri: urlPath,
+			headers: headers
+		)
 
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-        context.write(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer()))), promise: nil)
-        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
-    }
+		context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
+		context.write(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer()))), promise: nil)
+		context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+	}
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let clientResponse = self.unwrapInboundIn(data)
+	private func createExpectedWebSocketAcceptHeader(fromKey key: String) -> String {
+		let magicGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+		let acceptKey = key + magicGUID
+		let acceptData = Data(acceptKey.utf8)
+		let acceptHash = Insecure.SHA1.hash(data: acceptData)
+	
+		return acceptHash.withUnsafeBytes { (unsafeRawBufferPointer) -> String in
+			let hashData = Data(unsafeRawBufferPointer)
+			return hashData.base64EncodedString()
+		}
+	}
 
-        switch clientResponse {
-        case .head:
-            self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
-        case .body:
-            break
-        case .end:
-            context.close(promise: nil)
-        }
-    }
+	public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+		let clientResponse = self.unwrapInboundIn(data)
 
-    public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        self.upgradePromise.fail(error)
-        // As we are not really interested getting notified on success or failure
-        // we just pass nil as promise to reduce allocations.
-        context.close(promise: nil)
-    }
+		switch clientResponse {
+		case .head(let responseHead):
+			guard responseHead.status == .switchingProtocols,
+				  let upgradeHeader = responseHead.headers.first(name: "upgrade"),
+				  upgradeHeader.lowercased() == "websocket",
+				  let connectionHeader = responseHead.headers.first(name: "connection"),
+				  connectionHeader.lowercased() == "upgrade",
+				  let acceptHeader = responseHead.headers.first(name: "sec-websocket-accept")
+			else {
+				self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
+				return
+			}
+
+			// Verify the "sec-websocket-accept" header
+			let expectedAcceptHeader = createExpectedWebSocketAcceptHeader(fromKey: websocketKey)
+			if acceptHeader != expectedAcceptHeader {
+				self.upgradePromise.fail(HBWebSocketClient.Error.websocketUpgradeFailed)
+				return
+			}
+	
+		case .body:
+			break
+		case .end:
+			context.close(promise: nil)
+		}
+	}
+
+	public func errorCaught(context: ChannelHandlerContext, error: Error) {
+		self.upgradePromise.fail(error)
+		// As we are not really interested getting notified on success or failure
+		// we just pass nil as promise to reduce allocations.
+		context.close(promise: nil)
+	}
 }

@@ -72,11 +72,16 @@ public enum HBWebSocketClient {
     ) -> EventLoopFuture<Void> {
         let upgradePromise = eventLoop.makePromise(of: Void.self)
         upgradePromise.futureResult.cascadeFailure(to: wsPromise)
+        
+        // create random key for request key
+        let requestKey = (0..<16).map { _ in UInt8.random(in: .min ..< .max) }
+        let base64Key = String(base64Encoding: requestKey, options: [])
 
         // initial HTTP request handler, before upgrade
         let httpHandler: WebSocketInitialRequestHandler
         do {
             httpHandler = try WebSocketInitialRequestHandler(
+            	websocketKey:base64Key,
                 url: url,
                 upgradePromise: upgradePromise
             )
@@ -85,9 +90,6 @@ public enum HBWebSocketClient {
             return upgradePromise.futureResult
         }
 
-        // create random key for request key
-        let requestKey = (0..<16).map { _ in UInt8.random(in: .min ..< .max) }
-        let base64Key = String(base64Encoding: requestKey, options: [])
         let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: base64Key) { channel, _ in
             let webSocket = HBWebSocket(channel: channel, type: .client)
             return channel.pipeline.addHandler(WebSocketHandler(webSocket: webSocket)).map { _ -> Void in
