@@ -29,7 +29,7 @@ public enum HBWebSocketClient {
     ///   - configuration: Configuration of connection
     ///   - eventLoop: eventLoop to run connection on
     /// - Returns: EventLoopFuture which will be fulfilled with `HBWebSocket` once connection is made
-    public static func connect(url: HBURL, configuration: Configuration, on eventLoop: EventLoop) -> EventLoopFuture<HBWebSocket> {
+    public static func connect(url: HBURL, configuration:Configuration, on eventLoop: EventLoop) -> EventLoopFuture<HBWebSocket> {
         let wsPromise = eventLoop.makePromise(of: HBWebSocket.self)
         do {
             let url = try SplitURL(url: url)
@@ -38,7 +38,7 @@ public enum HBWebSocketClient {
                 .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
                 .channelInitializer { channel in
-                    return Self.setupChannelForWebsockets(url: url, channel: channel, wsPromise: wsPromise, on: eventLoop)
+                    return Self.setupChannelForWebsockets(url:url, channel:channel, wsPromise:wsPromise, on:eventLoop, configuration:configuration)
                 }
                 .connect(host: url.host, port: url.port)
                 .cascadeFailure(to: wsPromise)
@@ -68,7 +68,8 @@ public enum HBWebSocketClient {
         url: SplitURL,
         channel: Channel,
         wsPromise: EventLoopPromise<HBWebSocket>,
-        on eventLoop: EventLoop
+        on eventLoop: EventLoop,
+        configuration: Configuration
     ) -> EventLoopFuture<Void> {
         let upgradePromise = eventLoop.makePromise(of: Void.self)
         upgradePromise.futureResult.cascadeFailure(to: wsPromise)
@@ -78,12 +79,13 @@ public enum HBWebSocketClient {
         let base64Key = String(base64Encoding: requestKey, options: [])
 
         // initial HTTP request handler, before upgrade
-        let httpHandler: WebSocketInitialRequestHandler
+        let httpHandler:WebSocketInitialRequestHandler
         do {
             httpHandler = try WebSocketInitialRequestHandler(
             	websocketKey:base64Key,
                 url: url,
-                upgradePromise: upgradePromise
+                upgradePromise: upgradePromise,
+                configuration:configuration
             )
         } catch {
             upgradePromise.fail(Error.invalidURL)
@@ -115,18 +117,26 @@ public enum HBWebSocketClient {
     public enum Error: Swift.Error {
         case invalidURL
         case websocketUpgradeFailed
+        case invalidHTTPUpgradeResponse(HTTPResponseStatus)
+        case websocketRedirected(String)
+        case invalidOrMissingHTTPUpgradeHeader
+        case invalidOrMissingHTTPConnectionHeader
+        case missingSecWebSocketAcceptHeader
+        case invalidSecWebSocketAcceptHeader
     }
 
     /// WebSocket connection configuration
     public struct Configuration {
         /// TLS setup
-        let tlsConfiguration: TLSConfiguration
+        let tlsConfiguration:TLSConfiguration
+
+        /// Number of redirects to follow
+        let redirectCount:Int
 
         /// initialize Configuration
-        public init(
-            tlsConfiguration: TLSConfiguration = TLSConfiguration.makeClientConfiguration()
-        ) {
+        public init(tlsConfiguration: TLSConfiguration = TLSConfiguration.makeClientConfiguration(), redirectCount: Int = 0) {
             self.tlsConfiguration = tlsConfiguration
+            self.redirectCount = redirectCount
         }
     }
 
@@ -137,6 +147,7 @@ public enum HBWebSocketClient {
         let port: Int
         let tlsRequired: Bool
 
+        /// Initialize SplitURL
         init(url: HBURL) throws {
             guard let host = url.host else { throw HBWebSocketClient.Error.invalidURL }
             self.host = host
@@ -153,7 +164,7 @@ public enum HBWebSocketClient {
             self.pathQuery = url.path + (url.query.map { "?\($0)" } ?? "")
         }
 
-        /// return "Host" header value. Only include port if it is different from the default port for the request
+        /// Return "Host" header value. Only include port if it is different from the default port for the request
         var hostHeader: String {
             if (self.tlsRequired && self.port != 443) || (!self.tlsRequired && self.port != 80) {
                 return "\(self.host):\(self.port)"
