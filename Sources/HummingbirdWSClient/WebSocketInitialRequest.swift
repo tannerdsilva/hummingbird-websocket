@@ -50,14 +50,10 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 	public func channelActive(context: ChannelHandlerContext) {
 		// We are connected. It's time to send the message to the server to initialize the upgrade dance.
 		var headers = self.headers
-		// headers.replaceOrAdd(name:"Content-Length", value:"0")
+		headers.replaceOrAdd(name:"Content-Length", value:"0")
 		headers.replaceOrAdd(name:"Host", value:self.host)
 		headers.replaceOrAdd(name:"Upgrade", value:"websocket")
-		if let connectionHeaderValue = headers.first(name:"connection") {
-			headers.replaceOrAdd(name:"Connection", value: connectionHeaderValue + ", Upgrade")
-		} else {
-			headers.add(name: "Connection", value: "Upgrade")
-		}
+		headers.replaceOrAdd(name: "Connection", value: "Upgrade")
 		headers.replaceOrAdd(name: "Sec-WebSocket-Key", value: websocketKey)
 		headers.replaceOrAdd(name: "Sec-WebSocket-Version", value: "13")
 		// headers.add(name: "Origin", value: "hummingbird-websocket")
@@ -114,7 +110,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 				// in this branch of logic, the promises are handled upstream in a successful case
 				// in a failure case, the upgrade promise is handled, as it should be configured to cascade to the ws promise
 				guard responseHead.status == .switchingProtocols else {
-					self.upgradePromise.fail(HBWebSocketClient.Error.invalidHTTPUpgradeResponse(responseHead.status))
+					self.upgradePromise.fail(HBWebSocketClient.Error.invalidHTTPUpgradeResponse(responseHead))
 					return
 				}
 				guard let upgradeHeader = responseHead.headers.first(name:"upgrade"),

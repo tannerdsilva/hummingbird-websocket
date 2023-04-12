@@ -118,7 +118,7 @@ public enum HBWebSocketClient {
     public enum Error: Swift.Error {
         case invalidURL
         case websocketUpgradeFailed
-        case invalidHTTPUpgradeResponse(HTTPResponseStatus)
+        case invalidHTTPUpgradeResponse(HTTPResponseHead)
         case tooManyRedirects
         case invalidOrMissingHTTPUpgradeHeader
         case invalidOrMissingHTTPConnectionHeader
