@@ -29,20 +29,19 @@ public enum HBWebSocketClient {
     ///   - configuration: Configuration of connection
     ///   - eventLoop: eventLoop to run connection on
     /// - Returns: EventLoopFuture which will be fulfilled with `HBWebSocket` once connection is made
-    public static func connect(url: HBURL, configuration:Configuration, on eventLoop: EventLoop) -> EventLoopFuture<HBWebSocket> {
+    public static func connect(url:HBURL, configuration:Configuration, on eventLoop: EventLoop) -> EventLoopFuture<HBWebSocket> {
         let wsPromise = eventLoop.makePromise(of: HBWebSocket.self)
         do {
-            let url = try SplitURL(url: url)
-            let bootstrap = try createBootstrap(url: url, configuration: configuration, on: eventLoop)
+            let url = try SplitURL(url:url)
+            let bootstrap = try createBootstrap(url:url, configuration:configuration, on:eventLoop)
             bootstrap
                 .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
                 .channelInitializer { channel in
                     return Self.setupChannelForWebsockets(url:url, channel:channel, wsPromise:wsPromise, on:eventLoop, configuration:configuration)
                 }
-                .connect(host: url.host, port: url.port)
-                .cascadeFailure(to: wsPromise)
-
+                .connect(host:url.host, port:url.port)
+                .cascadeFailure(to:wsPromise)
         } catch {
             wsPromise.fail(error)
         }
@@ -65,13 +64,13 @@ public enum HBWebSocketClient {
 
     /// setup for channel for websocket. Create initial HTTP request and include upgrade for when it is successful
     static func setupChannelForWebsockets(
-        url: SplitURL,
-        channel: Channel,
-        wsPromise: EventLoopPromise<HBWebSocket>,
-        on eventLoop: EventLoop,
-        configuration: Configuration
+        url:SplitURL,
+        channel:Channel,
+        wsPromise:EventLoopPromise<HBWebSocket>,
+        on eventLoop:EventLoop,
+        configuration:Configuration
     ) -> EventLoopFuture<Void> {
-        let upgradePromise = eventLoop.makePromise(of: Void.self)
+        let upgradePromise = eventLoop.makePromise(of:Void.self)
         upgradePromise.futureResult.cascadeFailure(to: wsPromise)
         
         // create random key for request key
@@ -85,7 +84,9 @@ public enum HBWebSocketClient {
             	websocketKey:base64Key,
                 url: url,
                 upgradePromise: upgradePromise,
-                configuration:configuration
+                configuration:configuration,
+                eventLoop: eventLoop,
+                wsPromise: wsPromise
             )
         } catch {
             upgradePromise.fail(Error.invalidURL)
@@ -118,7 +119,7 @@ public enum HBWebSocketClient {
         case invalidURL
         case websocketUpgradeFailed
         case invalidHTTPUpgradeResponse(HTTPResponseStatus)
-        case websocketRedirected(String)
+        case tooManyRedirects
         case invalidOrMissingHTTPUpgradeHeader
         case invalidOrMissingHTTPConnectionHeader
         case missingSecWebSocketAcceptHeader
@@ -128,27 +129,31 @@ public enum HBWebSocketClient {
     /// WebSocket connection configuration
     public struct Configuration {
         /// TLS setup
-        let tlsConfiguration:TLSConfiguration
+        public let tlsConfiguration:TLSConfiguration
 
         /// Number of redirects to follow
-        let redirectCount:Int
+        public let redirectCount:Int
 
         /// initialize Configuration
         public init(tlsConfiguration: TLSConfiguration = TLSConfiguration.makeClientConfiguration(), redirectCount: Int = 0) {
             self.tlsConfiguration = tlsConfiguration
             self.redirectCount = redirectCount
         }
+
+        internal func withDecrementedRedirectCount() -> Configuration {
+            return Configuration(tlsConfiguration: self.tlsConfiguration, redirectCount: self.redirectCount - 1)
+        }
     }
 
     /// Processed URL split into sections we need for connection
     struct SplitURL {
-        let host: String
-        let pathQuery: String
-        let port: Int
-        let tlsRequired: Bool
+        let host:String
+        let pathQuery:String
+        let port:Int
+        let tlsRequired:Bool
 
         /// Initialize SplitURL
-        init(url: HBURL) throws {
+        init(url:HBURL) throws {
             guard let host = url.host else { throw HBWebSocketClient.Error.invalidURL }
             self.host = host
             if let port = url.port {
