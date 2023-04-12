@@ -96,42 +96,43 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 					 HBWebSocketClient.connect(url: newURL, configuration: self.configuration.withDecrementedRedirectCount(), on: self.eventLoop).whenComplete({
 						switch $0 {
 						case .success(let ws):
-							print("WebSocket upgrade succeeded after redirect")
+							self.wsPromise.succeed(ws)
+							self.upgradePromise.succeed(())
 						case .failure(let error):
-							print("WebSocket upgrade failed after redirect: \(error)")
+							self.wsPromise.fail(error)
+							self.upgradePromise.fail(error)
 						}
 					})
 				} else {
 					print("WebSocket upgrade failed after redirect: too many redirects")
 					self.wsPromise.fail(HBWebSocketClient.Error.tooManyRedirects)
+					self.upgradePromise.fail(HBWebSocketClient.Error.tooManyRedirects)
 				}
 				return
 			} else {
+				// in this branch of logic, the promises are handled upstream in a successful case
+				// in a failure case, the upgrade promise is handled, as it should be configured to cascade to the ws promise
 				guard responseHead.status == .switchingProtocols else {
 					self.upgradePromise.fail(HBWebSocketClient.Error.invalidHTTPUpgradeResponse(responseHead.status))
 					return
 				}
-
 				guard let upgradeHeader = responseHead.headers.first(name:"upgrade"),
 					upgradeHeader.lowercased() == "websocket" else {
 					print("WebSocket upgrade failed: missing or invalid 'upgrade' header")
 					self.upgradePromise.fail(HBWebSocketClient.Error.invalidOrMissingHTTPUpgradeHeader)
 					return
 				}
-
 				guard let connectionHeader = responseHead.headers.first(name:"connection"),
 					connectionHeader.lowercased() == "upgrade" else {
 					print("WebSocket upgrade failed: missing or invalid 'connection' header")
 					self.upgradePromise.fail(HBWebSocketClient.Error.invalidOrMissingHTTPConnectionHeader)
 					return
 				}
-
 				guard let acceptHeader = responseHead.headers.first(name:"sec-websocket-accept") else {
 					print("WebSocket upgrade failed: missing 'sec-websocket-accept' header")
 					self.upgradePromise.fail(HBWebSocketClient.Error.missingSecWebSocketAcceptHeader)
 					return
 				}
-
 				let expectedAcceptHeader = createExpectedWebSocketAcceptHeader(fromKey:websocketKey)
 				guard acceptHeader == expectedAcceptHeader else {
 					print("WebSocket upgrade failed: invalid 'sec-websocket-accept' header")
