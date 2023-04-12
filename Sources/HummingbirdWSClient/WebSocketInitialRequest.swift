@@ -91,6 +91,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		case .head(let responseHead):
 			if responseHead.status == .movedPermanently, let location = responseHead.headers.first(name: "location") {
 				let newURL = HBURL(location)
+				print("WebSocket upgrade failed: redirect to \(newURL)")
 				if self.configuration.redirectCount > 0 {
 					HBWebSocketClient.connect(url: newURL, configuration: self.configuration.withDecrementedRedirectCount(), on: self.eventLoop).cascade(to: self.wsPromise)
 				} else {
