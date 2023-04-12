@@ -102,6 +102,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 						}
 					})
 				} else {
+					print("WebSocket upgrade failed after redirect: too many redirects")
 					self.wsPromise.fail(HBWebSocketClient.Error.tooManyRedirects)
 				}
 				return
