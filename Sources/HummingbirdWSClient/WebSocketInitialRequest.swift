@@ -89,7 +89,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 			if responseHead.status == .movedPermanently, let location = responseHead.headers.first(name: "location") {
 				let newURL = HBURL(location)
 				print("WebSocket upgrade failed: redirect to \(newURL)")
-				if self.configuration.redirectCount > 0 {
+				/*if self.configuration.redirectCount > 0 {
 					 HBWebSocketClient.connect(url: newURL, configuration: self.configuration.withDecrementedRedirectCount(), on: self.eventLoop).whenComplete({
 						switch $0 {
 						case .success(let ws):
@@ -104,7 +104,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 					print("WebSocket upgrade failed after redirect: too many redirects")
 					self.wsPromise.fail(HBWebSocketClient.Error.tooManyRedirects)
 					self.upgradePromise.fail(HBWebSocketClient.Error.tooManyRedirects)
-				}
+				}*/
 				return
 			} else {
 				// in this branch of logic, the promises are handled upstream in a successful case
@@ -137,7 +137,10 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 					return
 				}
 			}
-		case .body:
+		case .body(bodyStream: var bodyStream):
+			let myBytes = bodyStream.readBytes(length:bodyStream.readableBytes)
+			let asString = String(bytes:myBytes!, encoding:.utf8)
+			print("WebSocket upgrade failed: BODY \(asString!)")
 			break
 		case .end:
 			context.close(promise: nil)
