@@ -93,7 +93,14 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 				let newURL = HBURL(location)
 				print("WebSocket upgrade failed: redirect to \(newURL)")
 				if self.configuration.redirectCount > 0 {
-					HBWebSocketClient.connect(url: newURL, configuration: self.configuration.withDecrementedRedirectCount(), on: self.eventLoop).cascade(to: self.wsPromise)
+					 HBWebSocketClient.connect(url: newURL, configuration: self.configuration.withDecrementedRedirectCount(), on: self.eventLoop).whenComplete({
+						switch $0 {
+						case .success(let ws):
+							print("WebSocket upgrade succeeded after redirect")
+						case .failure(let error):
+							print("WebSocket upgrade failed after redirect: \(error)")
+						}
+					})
 				} else {
 					self.wsPromise.fail(HBWebSocketClient.Error.tooManyRedirects)
 				}
