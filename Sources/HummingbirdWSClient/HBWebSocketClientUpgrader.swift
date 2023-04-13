@@ -48,6 +48,8 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
         upgradeRequestHeaders.replaceOrAdd(name: "Sec-WebSocket-Key", value: self.requestKey)
         upgradeRequestHeaders.replaceOrAdd(name: "Sec-WebSocket-Version", value: "13")
         upgradeRequestHeaders.replaceOrAdd(name: "Connection", value: "Upgrade")
+        upgradeRequestHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
+        upgradeRequestHeaders.replaceOrAdd(name: "Host", value: self.host)
     }
 
     /// Allow or deny the upgrade based on the upgrade HTTP response
