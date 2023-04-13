@@ -106,22 +106,16 @@ public enum HBWebSocketClient {
                 upgradePromise.succeed(())
             }
         }
-
-        return channel.pipeline.addHTTPClientHandlers(leftOverBytesStrategy: .forwardBytes).flatMap {
-            channel.pipeline.addHandler(websocketUpgrader)
-        }
+        
 
         let config: NIOHTTPClientUpgradeConfiguration = (
-            upgraders: [websocketUpgrader],
-            completionHandler: { _ in
-                channel.pipeline.removeHandler(httpHandler, promise: nil)
+            upgraders: [websocketUpgrader], completionHandler: { _ in
+                // do nothing
             }
         )
 
         // add HTTP handler with web socket upgrade
-        return channel.pipeline.addHTTPClientHandlers(leftOverBytesStrategy: .forwardBytes, withClientUpgrade: config).flatMap {
-            channel.pipeline.addHandler(httpHandler)
-        }
+        return channel.pipeline.addHTTPClientHandlers(leftOverBytesStrategy: .forwardBytes, withClientUpgrade: config)
     }
 
     /// Possible Errors returned by websocket connection
