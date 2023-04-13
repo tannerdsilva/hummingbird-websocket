@@ -52,12 +52,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		var headers = self.headers
 		headers.replaceOrAdd(name:"Content-Length", value:"0")
 		headers.replaceOrAdd(name:"Host", value:self.host)
-		headers.add(name:"Upgrade", value:"websocket")
-		if let connectionHeaderValue = headers.first(name:"Connection") {
-			headers.replaceOrAdd(name:"Connection", value: connectionHeaderValue + ", Upgrade")
-		} else {
-			headers.add(name: "Connection", value: "Upgrade")
-		}
+		headers.replaceOrAdd(name:"Origin", value:"http://\(self.host)")
 
 		let requestHead = HTTPRequestHead(
 			version:HTTPVersion(major:1, minor:1),
