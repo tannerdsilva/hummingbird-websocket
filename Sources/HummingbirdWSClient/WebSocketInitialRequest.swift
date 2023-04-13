@@ -50,15 +50,14 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 	public func channelActive(context: ChannelHandlerContext) {
 		// We are connected. It's time to send the message to the server to initialize the upgrade dance.
 		var headers = self.headers
-		headers.replaceOrAdd(name:"Content-Length", value:"0")
+		// headers.replaceOrAdd(name:"Content-Length", value:"0")
 		headers.replaceOrAdd(name:"Host", value:self.host)
 		// headers.add(name:"Upgrade", value:"websocket")
-		if let connectionHeaderValue = headers.first(name:"Connection") {
-			headers.replaceOrAdd(name:"Connection", value: connectionHeaderValue + ", Upgrade")
-		} else {
-			headers.add(name: "Connection", value: "Upgrade")
-		}
-
+		// if let connectionHeaderValue = headers.first(name:"Connection") {
+		// 	headers.replaceOrAdd(name:"Connection", value: connectionHeaderValue + ", Upgrade")
+		// } else {
+		// 	headers.add(name: "Connection", value: "Upgrade")
+		// }
 		let requestHead = HTTPRequestHead(
 			version:HTTPVersion(major:1, minor:1),
 			method:.GET,
