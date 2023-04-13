@@ -49,11 +49,11 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		// We are connected. It's time to send the message to the server to initialize the upgrade dance.
 		let headerDict: [(String, String)] = [
 			("Sec-WebSocket-Key", websocketKey),
-			("Sec-WebSocket-Version", "13"),
-			("Content-Length", "0"),
-			("Host", self.host),
-			("Upgrade", "websocket"),
-			("Connection", "Upgrade")
+			// ("Sec-WebSocket-Version", "13"),
+			// ("Content-Length", "0"),
+			// ("Host", self.host),
+			// ("Upgrade", "websocket"),
+			// ("Connection", "Upgrade")
 		]
 
 		let headers = HTTPHeaders(headerDict)
