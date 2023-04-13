@@ -65,7 +65,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 			uri:urlPath,
 			headers:headers
 		)
-		print("sending WebSocket header \(headers)")
+		print("sending WebSocket headers to \(urlPath))")
 		context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
 		context.write(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer(bytes:[])))), promise: nil)
 		context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
@@ -111,6 +111,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 				// in this branch of logic, the promises are handled upstream in a successful case
 				// in a failure case, the upgrade promise is handled, as it should be configured to cascade to the ws promise
 				guard responseHead.status == .switchingProtocols else {
+					print("WebSocket upgrade failed: invalid response status \(responseHead.status)")
 					self.upgradePromise.fail(HBWebSocketClient.Error.invalidHTTPUpgradeResponse(responseHead))
 					return
 				}

@@ -93,7 +93,7 @@ public enum HBWebSocketClient {
             return upgradePromise.futureResult
         }
 
-        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: base64Key, maxFrameSize: 1 << 20) { channel, _ in
+        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: base64Key) { channel, _ in
             let webSocket = HBWebSocket(channel: channel, type: .client)
             return channel.pipeline.addHandler(WebSocketHandler(webSocket: webSocket)).map { _ -> Void in
                 wsPromise.succeed(webSocket)
