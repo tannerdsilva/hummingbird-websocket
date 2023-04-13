@@ -58,7 +58,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		// } else {
 		// 	headers.add(name: "Connection", value: "Upgrade")
 		// }
-		headers.add(name:"Connection", value:"Upgrade")
+		// headers.add(name:"Connection", value:"Upgrade")
 		let requestHead = HTTPRequestHead(
 			version:HTTPVersion(major:1, minor:1),
 			method:.GET,

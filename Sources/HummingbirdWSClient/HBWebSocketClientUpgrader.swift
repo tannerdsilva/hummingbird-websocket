@@ -15,7 +15,8 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     public let supportedProtocol: String = "websocket"
     /// None of the websocket headers are actually defined as 'required'.
     public let requiredUpgradeHeaders: [String] = []
-    
+
+    private let host:String
     private let requestKey: String
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
@@ -27,6 +28,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     ///   - automaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
     ///   - upgradePipelineHandler: called once the upgrade was successful
     public init(
+        host: String,
         requestKey: String,
         maxFrameSize: Int = 1 << 20,
         automaticErrorHandling: Bool = true,
@@ -34,6 +36,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     ) {
         precondition(requestKey != "", "The request key must contain a valid Sec-WebSocket-Key")
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
+        self.host = host
         self.requestKey = requestKey
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
@@ -42,11 +45,9 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
 
     /// Add additional headers that are needed for a WebSocket upgrade request.
     public func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-		for curHeader in upgradeRequestHeaders {
-			print("curHeader: \(curHeader)")
-		}
-        upgradeRequestHeaders.add(name: "Sec-WebSocket-Key", value: self.requestKey)
-        upgradeRequestHeaders.add(name: "Sec-WebSocket-Version", value: "13")
+        upgradeRequestHeaders.replaceOrAdd(name: "Sec-WebSocket-Key", value: self.requestKey)
+        upgradeRequestHeaders.replaceOrAdd(name: "Sec-WebSocket-Version", value: "13")
+        upgradeRequestHeaders.replaceOrAdd(name: "Connection", value: "Upgrade")
     }
 
     /// Allow or deny the upgrade based on the upgrade HTTP response
