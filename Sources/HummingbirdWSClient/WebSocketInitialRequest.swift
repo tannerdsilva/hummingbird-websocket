@@ -57,7 +57,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		headers.replaceOrAdd(name:"Upgrade", value:"websocket")
 		headers.replaceOrAdd(name: "Connection", value: "Upgrade")
 
-		headers.add(name: "Origin", value: "https://tannersilva.com")
+		// headers.add(name: "Origin", value: "https://tannersilva.com")
 
 		let requestHead = HTTPRequestHead(
 			version:HTTPVersion(major:1, minor:1),
@@ -65,7 +65,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 			uri:urlPath,
 			headers:headers
 		)
-		print("sending WebSocket headers to \(urlPath))")
+		print("sending WebSocket headers to \(urlPath) \(requestHead)")
 		context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
 		context.write(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer(bytes:[])))), promise: nil)
 		context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
