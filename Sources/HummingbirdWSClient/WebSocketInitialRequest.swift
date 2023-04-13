@@ -30,17 +30,15 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 	
 	let host: String
 	let urlPath: String
-	let headers: HTTPHeaders
 	let eventLoop:EventLoop
 	let upgradePromise: EventLoopPromise<Void>
 	let configuration: HBWebSocketClient.Configuration
 	let wsPromise: EventLoopPromise<HBWebSocket>
 
-	init(websocketKey:String, url:HBWebSocketClient.SplitURL, headers:HTTPHeaders = [:], upgradePromise:EventLoopPromise<Void>, configuration:HBWebSocketClient.Configuration, eventLoop:EventLoop, wsPromise:EventLoopPromise<HBWebSocket>) throws {
+	init(websocketKey:String, url:HBWebSocketClient.SplitURL, upgradePromise:EventLoopPromise<Void>, configuration:HBWebSocketClient.Configuration, eventLoop:EventLoop, wsPromise:EventLoopPromise<HBWebSocket>) throws {
 		self.websocketKey = websocketKey
 		self.host = url.hostHeader
 		self.urlPath = url.pathQuery
-		self.headers = headers
 		self.upgradePromise = upgradePromise
 		self.configuration = configuration
 		self.eventLoop = eventLoop
