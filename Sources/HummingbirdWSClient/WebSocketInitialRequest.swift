@@ -64,7 +64,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 			uri:urlPath,
 			headers:headers
 		)
-
+		print("sending WebSocket header \(headers)")
 		context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
 		context.write(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer(bytes:[])))), promise: nil)
 		context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
