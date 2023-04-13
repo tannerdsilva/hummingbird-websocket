@@ -66,7 +66,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		)
 
 		context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-		context.write(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer()))), promise: nil)
+		context.write(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer(bytes:[])))), promise: nil)
 		context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
 	}
 
@@ -140,7 +140,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		case .body(bodyStream: var bodyStream):
 			let myBytes = bodyStream.readBytes(length:bodyStream.readableBytes)
 			let asString = String(bytes:myBytes!, encoding:.utf8)
-			print("WebSocket upgrade failed: BODY \(asString!)")
+			print("WebSocket upgrade failed: response was: \(asString!)")
 			break
 		case .end:
 			context.close(promise: nil)
