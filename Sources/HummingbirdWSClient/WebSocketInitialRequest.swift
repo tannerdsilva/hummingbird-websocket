@@ -47,8 +47,8 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 
 	public func channelActive(context: ChannelHandlerContext) {
 		var headers = HTTPHeaders()
-        headers.add(name: "content-length", value: "0")
-        headers.replaceOrAdd(name: "host", value: self.host)
+        headers.add(name: "Content-Length", value: "0")
+        headers.replaceOrAdd(name: "Host", value: self.host)
 
         let requestHead = HTTPRequestHead(
             version: HTTPVersion(major: 1, minor: 1),
