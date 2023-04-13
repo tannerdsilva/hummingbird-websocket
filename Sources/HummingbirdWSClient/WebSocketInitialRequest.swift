@@ -47,13 +47,17 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 
 	public func channelActive(context: ChannelHandlerContext) {
 		// We are connected. It's time to send the message to the server to initialize the upgrade dance.
-		var headers = HTTPHeaders()
-		headers.replaceOrAdd(name: "Sec-WebSocket-Key", value: websocketKey)
-		headers.replaceOrAdd(name: "Sec-WebSocket-Version", value: "13")
-		headers.replaceOrAdd(name:"Content-Length", value:"0")
-		headers.replaceOrAdd(name:"Host", value:self.host)
-		headers.replaceOrAdd(name:"Upgrade", value:"websocket")
-		headers.replaceOrAdd(name: "Connection", value: "Upgrade")
+		let headerDict: [(String, String)] = [
+			("Sec-WebSocket-Key", websocketKey),
+			("Sec-WebSocket-Version", "13"),
+			("Content-Length", "0"),
+			("Host", self.host),
+			("Upgrade", "websocket"),
+			("Connection", "Upgrade")
+		]
+
+		let headers = HTTPHeaders(headerDict)
+
 
 		// headers.add(name: "Origin", value: "https://tannersilva.com")
 
