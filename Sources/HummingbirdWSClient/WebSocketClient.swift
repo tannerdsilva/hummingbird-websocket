@@ -107,6 +107,10 @@ public enum HBWebSocketClient {
             }
         }
 
+        return channel.pipeline.addHTTPClientHandlers(leftOverBytesStrategy: .forwardBytes).flatMap {
+            channel.pipeline.addHandler(websocketUpgrader)
+        }
+
         let config: NIOHTTPClientUpgradeConfiguration = (
             upgraders: [websocketUpgrader],
             completionHandler: { _ in
