@@ -56,7 +56,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		headers.replaceOrAdd(name: "Connection", value: "Upgrade")
 		headers.replaceOrAdd(name: "Sec-WebSocket-Key", value: websocketKey)
 		headers.replaceOrAdd(name: "Sec-WebSocket-Version", value: "13")
-		// headers.add(name: "Origin", value: "hummingbird-websocket")
+		headers.add(name: "Origin", value: "https://tannersilva.com")
 
 		let requestHead = HTTPRequestHead(
 			version:HTTPVersion(major:1, minor:1),
