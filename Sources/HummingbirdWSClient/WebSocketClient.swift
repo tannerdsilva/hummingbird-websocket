@@ -29,19 +29,19 @@ public enum HBWebSocketClient {
     ///   - configuration: Configuration of connection
     ///   - eventLoop: eventLoop to run connection on
     /// - Returns: EventLoopFuture which will be fulfilled with `HBWebSocket` once connection is made
-    public static func connect(url:HBURL, configuration:Configuration, on eventLoop: EventLoop) -> EventLoopFuture<HBWebSocket> {
+    public static func connect(url: HBURL, configuration: Configuration, on eventLoop: EventLoop) -> EventLoopFuture<HBWebSocket> {
         let wsPromise = eventLoop.makePromise(of: HBWebSocket.self)
         do {
-            let url = try SplitURL(url:url)
-            let bootstrap = try createBootstrap(url:url, configuration:configuration, on:eventLoop)
+            let url = try SplitURL(url: url)
+            let bootstrap = try createBootstrap(url: url, configuration: configuration, on: eventLoop)
             bootstrap
                 .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
                 .channelInitializer { channel in
-                    return Self.setupChannelForWebsockets(url:url, channel:channel, wsPromise:wsPromise, on:eventLoop, configuration:configuration)
+                    return Self.setupChannelForWebsockets(url: url, channel: channel, wsPromise: wsPromise, on: eventLoop, configuration: configuration)
                 }
-                .connect(host:url.host, port:url.port)
-                .cascadeFailure(to:wsPromise)
+                .connect(host: url.host, port: url.port)
+                .cascadeFailure(to: wsPromise)
         } catch {
             wsPromise.fail(error)
         }
@@ -51,16 +51,22 @@ public enum HBWebSocketClient {
     /// create bootstrap
     static func createBootstrap(url: SplitURL, configuration: Configuration, on eventLoop: EventLoop) throws -> NIOClientTCPBootstrap {
         if let clientBootstrap = ClientBootstrap(validatingGroup: eventLoop) {
-            let sslContext = try NIOSSLContext(configuration: configuration.tlsConfiguration)
-            let tlsProvider = try NIOSSLClientTLSProvider<ClientBootstrap>(context: sslContext, serverHostname: url.host)
-            let bootstrap = NIOClientTCPBootstrap(clientBootstrap, tls: tlsProvider)
+            let bootstrap: NIOClientTCPBootstrap
+            
             if url.tlsRequired {
+                let sslContext = try NIOSSLContext(configuration: configuration.tlsConfiguration)
+                let tlsProvider = try NIOSSLClientTLSProvider<ClientBootstrap>(context: sslContext, serverHostname: url.host)
+                bootstrap = NIOClientTCPBootstrap(clientBootstrap, tls: tlsProvider)
                 bootstrap.enableTLS()
+            } else {
+                bootstrap = NIOClientTCPBootstrap(clientBootstrap, tls: NIOInsecureNoTLS())
             }
+            
             return bootstrap
         }
         preconditionFailure("Failed to create web socket bootstrap")
     }
+
 
     /// setup for channel for websocket. Create initial HTTP request and include upgrade for when it is successful
     static func setupChannelForWebsockets(
