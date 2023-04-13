@@ -140,7 +140,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 		case .body(bodyStream: var bodyStream):
 			let myBytes = bodyStream.readBytes(length:bodyStream.readableBytes)
 			let asString = String(bytes:myBytes!, encoding:.utf8)
-			print("WebSocket upgrade failed: response was: \(asString!)")
+			print("WebSocket upgrade for \(self.host) failed: response was: \(asString!)")
 			break
 		case .end:
 			context.close(promise: nil)
