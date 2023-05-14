@@ -9,7 +9,8 @@ import NIOWebSocket
 import Crypto
 import struct Foundation.Data
 
-// this HTTPClientProtocolUpgrader is a copy of NIOWebSocketClientUpgrader. this is needed to allow HummingbirdWebSocket to have precise control over the headers that are sent to the server.
+// - this HTTPClientProtocolUpgrader is a modified copy of NIOWebSocketClientUpgrader. 
+// - this is needed to allow HummingbirdWebSocket to have precise control over the headers that are sent to the server.
 public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     
     // RFC 6455 specs this as the required entry in the Upgrade header.
@@ -18,17 +19,20 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     // None of the websocket headers are actually defined as 'required'.
     public let requiredUpgradeHeaders: [String] = []
 
+    private let host:String
     private let requestKey: String
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
     private let upgradePipelineHandler: (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
 
     /// - Parameters:
+    ///   - host: sent to the server in the `Host` HTTP header. Default is "localhost".
     ///   - requestKey: sent to the server in the `Sec-WebSocket-Key` HTTP header. Default is random request key.
     ///   - maxFrameSize: largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
     ///   - automaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
     ///   - upgradePipelineHandler: called once the upgrade was successful
     public init(
+        host:String = "localhost",
         requestKey: String,
         maxFrameSize: Int = 1 << 20,
         automaticErrorHandling: Bool = true,
@@ -36,6 +40,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     ) {
         precondition(requestKey != "", "The request key must contain a valid Sec-WebSocket-Key")
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
+        self.host = host
         self.requestKey = requestKey
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
@@ -48,6 +53,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
         upgradeRequestHeaders.replaceOrAdd(name: "Sec-WebSocket-Version", value: "13")
         upgradeRequestHeaders.replaceOrAdd(name: "Connection", value: "Upgrade") // RFC 6455 requires this to be case insensitively compared. However, many server sockets check explicitly for == "Upgrade", and SwiftNIO will (by default) send a header that is "upgrade" if not for this custom implementation.
         upgradeRequestHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
+        upgradeRequestHeaders.replaceOrAdd(name: "Host", value: self.host)
     }
 
     /// Allow or deny the upgrade based on the upgrade HTTP response
