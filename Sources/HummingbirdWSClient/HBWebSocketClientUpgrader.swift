@@ -59,7 +59,10 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     /// Allow or deny the upgrade based on the upgrade HTTP response
     /// headers containing the correct accept key.
     public func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
-        print("HBWS SHOULD UPGRADE?")
+        print("HBWS SHOULD ALLOW")
+        guard upgradeResponse.status == .switchingProtocols else {
+            return false
+        }
         let acceptValueHeader = upgradeResponse.headers["Sec-WebSocket-Accept"]
 
         guard acceptValueHeader.count == 1 else {
@@ -82,7 +85,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     /// Called when the upgrade response has been flushed and it is safe to mutate the channel
     /// pipeline. Adds channel handlers for websocket frame encoding, decoding and errors.
     public func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void> {
-
+        print("HBWS UPGRADE")
         var upgradeFuture = context.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {
             context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
         }
