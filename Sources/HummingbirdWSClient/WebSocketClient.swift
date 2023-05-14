@@ -109,7 +109,7 @@ public enum HBWebSocketClient {
         // create random key for request key
         let requestKey = (0..<16).map { _ in UInt8.random(in: .min ..< .max) }
         let base64Key = String(base64Encoding: requestKey, options: [])
-        let websocketUpgrader = NIOWebSocketClientUpgrader(
+        let websocketUpgrader = HBWebSocketClientUpgrader(
             requestKey: base64Key,
             maxFrameSize: configuration.maxFrameSize
         ) { channel, _ in

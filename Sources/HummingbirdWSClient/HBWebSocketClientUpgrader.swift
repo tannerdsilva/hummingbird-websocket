@@ -18,7 +18,6 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     // None of the websocket headers are actually defined as 'required'.
     public let requiredUpgradeHeaders: [String] = []
 
-    private let host:String
     private let requestKey: String
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
@@ -30,7 +29,6 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     ///   - automaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
     ///   - upgradePipelineHandler: called once the upgrade was successful
     public init(
-        host: String,
         requestKey: String,
         maxFrameSize: Int = 1 << 20,
         automaticErrorHandling: Bool = true,
@@ -38,7 +36,6 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     ) {
         precondition(requestKey != "", "The request key must contain a valid Sec-WebSocket-Key")
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
-        self.host = host
         self.requestKey = requestKey
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
@@ -51,7 +48,6 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
         upgradeRequestHeaders.replaceOrAdd(name: "Sec-WebSocket-Version", value: "13")
         upgradeRequestHeaders.replaceOrAdd(name: "Connection", value: "Upgrade") // RFC 6455 requires this to be case insensitively compared. However, many server sockets check explicitly for == "Upgrade", and SwiftNIO will (by default) send a header that is "upgrade" if not for this custom implementation.
         upgradeRequestHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
-        upgradeRequestHeaders.replaceOrAdd(name: "Host", value: self.host)
     }
 
     /// Allow or deny the upgrade based on the upgrade HTTP response
