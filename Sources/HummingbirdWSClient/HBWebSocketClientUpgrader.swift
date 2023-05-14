@@ -59,7 +59,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     /// Allow or deny the upgrade based on the upgrade HTTP response
     /// headers containing the correct accept key.
     public func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
-        
+        print("HBWS SHOULD UPGRADE?")
         let acceptValueHeader = upgradeResponse.headers["Sec-WebSocket-Accept"]
 
         guard acceptValueHeader.count == 1 else {

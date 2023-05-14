@@ -65,6 +65,7 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 	}
 
 	public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+		print("HBWS READING RESPONSE")
 		let clientResponse = self.unwrapInboundIn(data)
 		
 		switch clientResponse {
