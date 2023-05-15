@@ -85,7 +85,8 @@ public enum HBWebSocketClient {
 
 
         let websocketUpgrader = HBWebSocketClientUpgrader(host:url.hostHeader, requestKey: base64Key, maxFrameSize: 1 << 20, upgradePromise:upgradePromise) { channel, _ in
-            let webSocket = HBWebSocket(channel: channel, type: .client)
+            print("HBWS websocket upgrade successful")
+			let webSocket = HBWebSocket(channel: channel, type: .client)
             return channel.pipeline.addHandler(WebSocketHandler(webSocket: webSocket)).map { _ -> Void in
                 wsPromise.succeed(webSocket)
             }
@@ -128,6 +129,7 @@ public enum HBWebSocketClient {
             self.redirectCount = redirectCount
         }
 
+		/// Return configuration with redirect count decremented
         internal func withDecrementedRedirectCount() -> Configuration {
             return Configuration(tlsConfiguration: self.tlsConfiguration, redirectCount: self.redirectCount - 1)
         }

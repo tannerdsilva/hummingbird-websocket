@@ -72,6 +72,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
 
 	/// Adds additional headers that are needed for a WebSocket upgrade request. It is important that it is done this way, as to have the "final say" in the values of these headers before they are written.
 	public func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
+		print("HBWS CUSTOM")
 		upgradeRequestHeaders.replaceOrAdd(name: "Sec-WebSocket-Key", value: self.requestKey)
 		upgradeRequestHeaders.replaceOrAdd(name: "Sec-WebSocket-Version", value: "13")
 		// RFC 6455 requires this to be case-insensitively compared. However, many server sockets check explicitly for == "Upgrade", and SwiftNIO will (by default) send a header that is "upgrade" if not for this custom implementation with the NIOHTTPProtocolUpgrader protocol.
@@ -83,7 +84,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
 	/// Allow or deny the upgrade based on the upgrade HTTP response
 	/// headers containing the correct accept key.
 	public func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
-
+		print("HBWS SHOULD ALLOW UPGRADE")
 		// determine a basic path forward based on the HTTP response status code
 		switch upgradeResponse.status {
 			case .movedPermanently, .found, .seeOther, .notModified, .useProxy, .temporaryRedirect, .permanentRedirect:
@@ -122,6 +123,7 @@ public final class HBWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
 
 	/// Called when the upgrade response has been flushed and it is safe to mutate the channel pipeline. Adds channel handlers for websocket frame encoding, decoding and errors.
 	public func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void> {
+		print("HBWS UPGRADE")
 		var useHandlers:[NIOCore.ChannelHandler] = [ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize:self.maxFrameSize))]
 		if self.automaticErrorHandling {
 			useHandlers.append(WebSocketProtocolErrorHandler())
