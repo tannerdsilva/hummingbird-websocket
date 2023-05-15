@@ -82,25 +82,42 @@ public enum HBWebSocketClient {
         // create random key for request key
         let requestKey = (0..<16).map { _ in UInt8.random(in: .min ..< .max) }
         let base64Key = String(base64Encoding: requestKey, options: [])
-		print("HBWS STARTING")
+
+        // initial HTTP request handler, before upgrade
+        let httpHandler:WebSocketInitialRequestHandler
+        do {
+            httpHandler = try WebSocketInitialRequestHandler(
+            	websocketKey:base64Key,
+                url: url,
+                upgradePromise: upgradePromise,
+                configuration:configuration,
+                eventLoop: eventLoop,
+                wsPromise: wsPromise
+            )
+        } catch {
+            upgradePromise.fail(Error.invalidURL)
+            return upgradePromise.futureResult
+        }
 
         let websocketUpgrader = HBWebSocketClientUpgrader(host:url.hostHeader, requestKey: base64Key, maxFrameSize: 1 << 20, upgradePromise:upgradePromise) { channel, _ in
-            print("HBWS websocket upgrade successful")
-			let webSocket = HBWebSocket(channel: channel, type: .client)
+            let webSocket = HBWebSocket(channel: channel, type: .client)
             return channel.pipeline.addHandler(WebSocketHandler(webSocket: webSocket)).map { _ -> Void in
                 wsPromise.succeed(webSocket)
+                upgradePromise.succeed(())
             }
         }
 
         let config: NIOHTTPClientUpgradeConfiguration = (
             upgraders: [websocketUpgrader],
             completionHandler: { _ in
-                
+                channel.pipeline.removeHandler(httpHandler, promise: nil)
             }
         )
 
         // add HTTP handler with web socket upgrade
-        return channel.pipeline.addHTTPClientHandlers(leftOverBytesStrategy: .forwardBytes, withClientUpgrade: config)
+        return channel.pipeline.addHTTPClientHandlers(leftOverBytesStrategy: .forwardBytes, withClientUpgrade: config).flatMap {
+            channel.pipeline.addHandler(httpHandler)
+        }
     }
 
     /// Possible Errors returned by websocket connection
@@ -129,7 +146,6 @@ public enum HBWebSocketClient {
             self.redirectCount = redirectCount
         }
 
-		/// Return configuration with redirect count decremented
         internal func withDecrementedRedirectCount() -> Configuration {
             return Configuration(tlsConfiguration: self.tlsConfiguration, redirectCount: self.redirectCount - 1)
         }
