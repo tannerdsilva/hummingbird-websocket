@@ -39,7 +39,7 @@ public enum HBWebSocketClient {
                 .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
                 .channelInitializer { channel in
                     return Self.setupChannelForWebsockets(url: url, channel: channel, wsPromise: wsPromise, on: eventLoop, configuration: configuration)
-                }
+                }.connectTimeout(.seconds(5))
                 .connect(host: url.host, port: url.port)
                 .cascadeFailure(to: wsPromise)
         } catch {
@@ -86,14 +86,7 @@ public enum HBWebSocketClient {
         // initial HTTP request handler, before upgrade
         let httpHandler:WebSocketInitialRequestHandler
         do {
-            httpHandler = try WebSocketInitialRequestHandler(
-            	websocketKey:base64Key,
-                url: url,
-                upgradePromise: upgradePromise,
-                configuration:configuration,
-                eventLoop: eventLoop,
-                wsPromise: wsPromise
-            )
+            httpHandler = try WebSocketInitialRequestHandler(url: url)
         } catch {
             upgradePromise.fail(Error.invalidURL)
             return upgradePromise.futureResult
@@ -103,7 +96,6 @@ public enum HBWebSocketClient {
             let webSocket = HBWebSocket(channel: channel, type: .client)
             return channel.pipeline.addHandler(WebSocketHandler(webSocket: webSocket)).map { _ -> Void in
                 wsPromise.succeed(webSocket)
-                // upgradePromise.succeed(())
             }
         }
 

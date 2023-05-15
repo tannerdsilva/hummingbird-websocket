@@ -26,25 +26,12 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 	public typealias InboundIn = HTTPClientResponsePart
 	public typealias OutboundOut = HTTPClientRequestPart
 
-	let websocketKey:String
-	
-	let host: String
 	let urlPath: String
 	let headers: HTTPHeaders
-	let eventLoop:EventLoop
-	let upgradePromise: EventLoopPromise<Void>
-	let configuration: HBWebSocketClient.Configuration
-	let wsPromise: EventLoopPromise<HBWebSocket>
 
-	init(websocketKey:String, url:HBWebSocketClient.SplitURL, headers:HTTPHeaders = [:], upgradePromise:EventLoopPromise<Void>, configuration:HBWebSocketClient.Configuration, eventLoop:EventLoop, wsPromise:EventLoopPromise<HBWebSocket>) throws {
-		self.websocketKey = websocketKey
-		self.host = url.hostHeader
+	init(url:HBWebSocketClient.SplitURL, headers:HTTPHeaders = [:]) throws {
 		self.urlPath = url.pathQuery
 		self.headers = headers
-		self.upgradePromise = upgradePromise
-		self.configuration = configuration
-		self.eventLoop = eventLoop
-		self.wsPromise = wsPromise
 	}
 
 	public func channelActive(context: ChannelHandlerContext) {
@@ -127,7 +114,6 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 	}
 
 	public func errorCaught(context: ChannelHandlerContext, error: Error) {
-		self.upgradePromise.fail(error)
 		// As we are not really interested getting notified on success or failure
 		// we just pass nil as promise to reduce allocations.
 		context.close(promise: nil)
