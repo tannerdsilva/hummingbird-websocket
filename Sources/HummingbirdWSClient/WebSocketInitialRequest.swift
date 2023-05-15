@@ -48,104 +48,81 @@ final class WebSocketInitialRequestHandler: ChannelInboundHandler, RemovableChan
 	}
 
 	public func channelActive(context: ChannelHandlerContext) {
-		// We are connected. It's time to send the message to the server to initialize the upgrade dance.
-		var headers = self.headers
-		// headers.replaceOrAdd(name:"Content-Length", value:"0")
-		headers.replaceOrAdd(name:"Host", value:self.host)
-		// headers.add(name:"Upgrade", value:"websocket")
-		// if let connectionHeaderValue = headers.first(name:"Connection") {
-		// 	headers.replaceOrAdd(name:"Connection", value: connectionHeaderValue + ", Upgrade")
-		// } else {
-		// 	headers.add(name: "Connection", value: "Upgrade")
-		// }
-		// headers.add(name:"Connection", value:"Upgrade")
 		let requestHead = HTTPRequestHead(
 			version:HTTPVersion(major:1, minor:1),
 			method:.GET,
 			uri:urlPath,
 			headers:headers
 		)
-
 		context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
 		context.write(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer()))), promise: nil)
 		context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
 	}
 
-	private func createExpectedWebSocketAcceptHeader(fromKey key: String) -> String {
-		let magicGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-		let acceptKey = key + magicGUID
-		let acceptData = Data(acceptKey.utf8)
-		let acceptHash = Insecure.SHA1.hash(data: acceptData)
-		return acceptHash.withUnsafeBytes { (unsafeRawBufferPointer) -> String in
-			let hashData = Data(unsafeRawBufferPointer)
-			return hashData.base64EncodedString()
-		}
-	}
-
 	public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-		let clientResponse = self.unwrapInboundIn(data)
+		// let clientResponse = self.unwrapInboundIn(data)
 		
-		switch clientResponse {
-		case .head(let responseHead):
-			if responseHead.status == .movedPermanently, let location = responseHead.headers.first(name: "location") {
-				let newURL = HBURL(location)
-				print("WebSocket upgrade failed: redirect to \(newURL)")
-				if self.configuration.redirectCount > 0 {
-					 HBWebSocketClient.connect(url: newURL, configuration: self.configuration.withDecrementedRedirectCount(), on: self.eventLoop).whenComplete({
-						switch $0 {
-						case .success(let ws):
-							self.wsPromise.succeed(ws)
-							self.upgradePromise.succeed(())
-						case .failure(let error):
-							self.wsPromise.fail(error)
-							self.upgradePromise.fail(error)
-						}
-					})
-				} else {
-					print("WebSocket upgrade failed after redirect: too many redirects")
-					self.wsPromise.fail(HBWebSocketClient.Error.tooManyRedirects)
-					self.upgradePromise.fail(HBWebSocketClient.Error.tooManyRedirects)
-				}
-				return
-			} else {
-				// in this branch of logic, the promises are handled upstream in a successful case
-				// in a failure case, the upgrade promise is handled, as it should be configured to cascade to the ws promise
-				guard responseHead.status == .switchingProtocols else {
-					self.upgradePromise.fail(HBWebSocketClient.Error.invalidHTTPUpgradeResponse(responseHead.status))
-					return
-				}
-				guard let upgradeHeader = responseHead.headers.first(name:"upgrade"),
-					upgradeHeader.lowercased() == "websocket" else {
-					print("WebSocket upgrade failed: missing or invalid 'upgrade' header")
-					self.upgradePromise.fail(HBWebSocketClient.Error.invalidOrMissingHTTPUpgradeHeader)
-					return
-				}
-				guard let connectionHeader = responseHead.headers.first(name:"connection"),
-					connectionHeader.lowercased() == "upgrade" else {
-					print("WebSocket upgrade failed: missing or invalid 'connection' header")
-					self.upgradePromise.fail(HBWebSocketClient.Error.invalidOrMissingHTTPConnectionHeader)
-					return
-				}
-				guard let acceptHeader = responseHead.headers.first(name:"sec-websocket-accept") else {
-					print("WebSocket upgrade failed: missing 'sec-websocket-accept' header")
-					self.upgradePromise.fail(HBWebSocketClient.Error.missingSecWebSocketAcceptHeader)
-					return
-				}
-				let expectedAcceptHeader = createExpectedWebSocketAcceptHeader(fromKey:websocketKey)
-				guard acceptHeader == expectedAcceptHeader else {
-					print("WebSocket upgrade failed: invalid 'sec-websocket-accept' header")
-					self.upgradePromise.fail(HBWebSocketClient.Error.invalidSecWebSocketAcceptHeader)
-					return
-				}
-			}
-		case .body(var bodyStream):
-			let myBytes = bodyStream.readBytes(length:bodyStream.readableBytes)
-			let asString = String(bytes:myBytes!, encoding:.utf8)
-			print("WebSocket upgrade for \(self.host) failed: response was: \(asString!)")
-			break
-		case .end:
-			context.close(promise: nil)
-		}
+		// switch clientResponse {
+		// case .head(let responseHead):
+		// 	if responseHead.status == .movedPermanently, let location = responseHead.headers.first(name: "location") {
+		// 		let newURL = HBURL(location)
+		// 		print("WebSocket upgrade failed: redirect to \(newURL)")
+		// 		if self.configuration.redirectCount > 0 {
+		// 			 HBWebSocketClient.connect(url: newURL, configuration: self.configuration.withDecrementedRedirectCount(), on: self.eventLoop).whenComplete({
+		// 				switch $0 {
+		// 				case .success(let ws):
+		// 					self.wsPromise.succeed(ws)
+		// 					self.upgradePromise.succeed(())
+		// 				case .failure(let error):
+		// 					self.wsPromise.fail(error)
+		// 					self.upgradePromise.fail(error)
+		// 				}
+		// 			})
+		// 		} else {
+		// 			print("WebSocket upgrade failed after redirect: too many redirects")
+		// 			self.wsPromise.fail(HBWebSocketClient.Error.tooManyRedirects)
+		// 			self.upgradePromise.fail(HBWebSocketClient.Error.tooManyRedirects)
+		// 		}
+		// 		return
+		// 	} else {
+		// 		// in this branch of logic, the promises are handled upstream in a successful case
+		// 		// in a failure case, the upgrade promise is handled, as it should be configured to cascade to the ws promise
+		// 		guard responseHead.status == .switchingProtocols else {
+		// 			self.upgradePromise.fail(HBWebSocketClient.Error.invalidHTTPUpgradeResponse(responseHead.status))
+		// 			return
+		// 		}
+		// 		guard let upgradeHeader = responseHead.headers.first(name:"upgrade"),
+		// 			upgradeHeader.lowercased() == "websocket" else {
+		// 			print("WebSocket upgrade failed: missing or invalid 'upgrade' header")
+		// 			self.upgradePromise.fail(HBWebSocketClient.Error.invalidOrMissingHTTPUpgradeHeader)
+		// 			return
+		// 		}
+		// 		guard let connectionHeader = responseHead.headers.first(name:"connection"),
+		// 			connectionHeader.lowercased() == "upgrade" else {
+		// 			print("WebSocket upgrade failed: missing or invalid 'connection' header")
+		// 			self.upgradePromise.fail(HBWebSocketClient.Error.invalidOrMissingHTTPConnectionHeader)
+		// 			return
+		// 		}
+		// 		guard let acceptHeader = responseHead.headers.first(name:"sec-websocket-accept") else {
+		// 			print("WebSocket upgrade failed: missing 'sec-websocket-accept' header")
+		// 			self.upgradePromise.fail(HBWebSocketClient.Error.missingSecWebSocketAcceptHeader)
+		// 			return
+		// 		}
+		// 		let expectedAcceptHeader = createExpectedWebSocketAcceptHeader(fromKey:websocketKey)
+		// 		guard acceptHeader == expectedAcceptHeader else {
+		// 			print("WebSocket upgrade failed: invalid 'sec-websocket-accept' header")
+		// 			self.upgradePromise.fail(HBWebSocketClient.Error.invalidSecWebSocketAcceptHeader)
+		// 			return
+		// 		}
+		// 	}
+		// case .body(var bodyStream):
+		// 	let myBytes = bodyStream.readBytes(length:bodyStream.readableBytes)
+		// 	let asString = String(bytes:myBytes!, encoding:.utf8)
+		// 	print("WebSocket upgrade for \(self.host) failed: response was: \(asString!)")
+		// 	break
+		// case .end:
+		// 	context.close(promise: nil)
+		// }
 			
 	}
 
