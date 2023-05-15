@@ -103,7 +103,7 @@ public enum HBWebSocketClient {
             let webSocket = HBWebSocket(channel: channel, type: .client)
             return channel.pipeline.addHandler(WebSocketHandler(webSocket: webSocket)).map { _ -> Void in
                 wsPromise.succeed(webSocket)
-                upgradePromise.succeed(())
+                // upgradePromise.succeed(())
             }
         }
 
